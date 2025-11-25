@@ -9,7 +9,7 @@ import MockupGallery from '../components/MockupGallery';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { googleConnected, etsyConnected } = useAuthStore();
+  const { googleConnected } = useAuthStore();
   const { selectedMockups, clearSelection } = useMockupStore();
 
   const { data, isLoading, error } = useQuery({
@@ -36,7 +36,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Your Mockups</h1>
           <p className="text-gray-600 mt-1">
-            Select mockups to create Etsy listings
+            Select mockups to generate listing content
           </p>
         </div>
         {selectedMockups.length > 0 && (
@@ -62,55 +62,27 @@ export default function DashboardPage() {
       </div>
 
       {/* Connection Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className={`card ${googleConnected ? 'border-2 border-green-500' : 'border-2 border-yellow-500'}`}>
-          <div className="flex items-center space-x-3">
-            {googleConnected ? (
-              <CheckCircle2 className="text-green-500" size={24} />
-            ) : (
+      {!googleConnected && (
+        <div className="card border-2 border-yellow-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
               <AlertCircle className="text-yellow-500" size={24} />
-            )}
-            <div>
-              <h3 className="font-semibold">Google Drive</h3>
-              <p className="text-sm text-gray-600">
-                {googleConnected ? 'Connected' : 'Not connected'}
-              </p>
+              <div>
+                <h3 className="font-semibold">Google Drive Not Connected</h3>
+                <p className="text-sm text-gray-600">
+                  Connect your Google Drive to browse your mockup images
+                </p>
+              </div>
             </div>
-          </div>
-          {!googleConnected && (
             <button
               onClick={() => authApi.googleAuth()}
-              className="btn btn-primary mt-4 w-full"
+              className="btn btn-primary"
             >
               Connect Google Drive
             </button>
-          )}
-        </div>
-
-        <div className={`card ${etsyConnected ? 'border-2 border-green-500' : 'border-2 border-yellow-500'}`}>
-          <div className="flex items-center space-x-3">
-            {etsyConnected ? (
-              <CheckCircle2 className="text-green-500" size={24} />
-            ) : (
-              <AlertCircle className="text-yellow-500" size={24} />
-            )}
-            <div>
-              <h3 className="font-semibold">Etsy</h3>
-              <p className="text-sm text-gray-600">
-                {etsyConnected ? 'Connected' : 'Not connected'}
-              </p>
-            </div>
           </div>
-          {!etsyConnected && googleConnected && (
-            <button
-              onClick={() => authApi.etsyAuth()}
-              className="btn btn-primary mt-4 w-full"
-            >
-              Connect Etsy
-            </button>
-          )}
         </div>
-      </div>
+      )}
 
       {/* Mockup Gallery */}
       {googleConnected ? (

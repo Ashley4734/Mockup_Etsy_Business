@@ -14,9 +14,6 @@ export const auth = {
   logout: () => api.post('/auth/logout'),
   googleAuth: () => {
     window.location.href = '/api/auth/google';
-  },
-  etsyAuth: () => {
-    window.location.href = '/api/auth/etsy';
   }
 };
 

@@ -1,11 +1,5 @@
 const pool = require('../config/database');
 const GoogleDriveService = require('../services/googleDrive');
-const EtsyService = require('../services/etsy');
-const crypto = require('crypto');
-
-// Temporary storage for OAuth state and code verifiers
-// In production, consider using Redis
-const oauthStateStore = new Map();
 
 /**
  * Initiate Google OAuth flow
@@ -74,84 +68,6 @@ exports.handleGoogleCallback = async (req, res) => {
 };
 
 /**
- * Initiate Etsy OAuth flow
- */
-exports.initiateEtsyAuth = (req, res) => {
-  try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: 'Please authenticate with Google first' });
-    }
-
-    const state = crypto.randomBytes(16).toString('hex');
-    const { url, codeVerifier } = EtsyService.getAuthUrl(state);
-
-    // Store state and code verifier
-    oauthStateStore.set(state, {
-      codeVerifier,
-      userId: req.session.userId,
-      timestamp: Date.now()
-    });
-
-    // Clean up old state entries (older than 10 minutes)
-    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-    for (const [key, value] of oauthStateStore.entries()) {
-      if (value.timestamp < tenMinutesAgo) {
-        oauthStateStore.delete(key);
-      }
-    }
-
-    res.redirect(url);
-  } catch (error) {
-    console.error('Error initiating Etsy auth:', error);
-    res.status(500).json({ error: 'Failed to initiate Etsy authentication' });
-  }
-};
-
-/**
- * Handle Etsy OAuth callback
- */
-exports.handleEtsyCallback = async (req, res) => {
-  try {
-    const { code, state } = req.query;
-
-    if (!code || !state) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=no_code`);
-    }
-
-    // Verify state
-    const storedData = oauthStateStore.get(state);
-    if (!storedData) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=invalid_state`);
-    }
-
-    oauthStateStore.delete(state);
-
-    // Exchange code for tokens
-    const tokens = await EtsyService.getTokensFromCode(code, storedData.codeVerifier);
-
-    // Get user's shop info
-    const etsyService = new EtsyService(tokens);
-    const shops = await etsyService.getUserShops();
-    const shopId = shops.length > 0 ? shops[0].shop_id : null;
-
-    // Update user record
-    await pool.query(
-      'UPDATE users SET etsy_tokens = $1, etsy_shop_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [JSON.stringify(tokens), shopId, storedData.userId]
-    );
-
-    // Update session
-    req.session.etsyTokens = tokens;
-    req.session.etsyShopId = shopId;
-
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?etsy_auth=success`);
-  } catch (error) {
-    console.error('Error handling Etsy callback:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}?error=etsy_auth_failed`);
-  }
-};
-
-/**
  * Get authentication status
  */
 exports.getAuthStatus = async (req, res) => {
@@ -159,21 +75,19 @@ exports.getAuthStatus = async (req, res) => {
     if (!req.session.userId) {
       return res.json({
         authenticated: false,
-        googleConnected: false,
-        etsyConnected: false
+        googleConnected: false
       });
     }
 
     const userResult = await pool.query(
-      'SELECT email, google_tokens, etsy_tokens, etsy_shop_id FROM users WHERE id = $1',
+      'SELECT email, google_tokens FROM users WHERE id = $1',
       [req.session.userId]
     );
 
     if (userResult.rows.length === 0) {
       return res.json({
         authenticated: false,
-        googleConnected: false,
-        etsyConnected: false
+        googleConnected: false
       });
     }
 
@@ -182,9 +96,7 @@ exports.getAuthStatus = async (req, res) => {
     res.json({
       authenticated: true,
       email: user.email,
-      googleConnected: !!user.google_tokens,
-      etsyConnected: !!user.etsy_tokens,
-      etsyShopId: user.etsy_shop_id
+      googleConnected: !!user.google_tokens
     });
   } catch (error) {
     console.error('Error getting auth status:', error);

@@ -18,18 +18,7 @@ const requireGoogleAuth = (req, res, next) => {
   next();
 };
 
-/**
- * Middleware to check if Etsy is connected
- */
-const requireEtsyAuth = (req, res, next) => {
-  if (!req.session || !req.session.etsyTokens) {
-    return res.status(401).json({ error: 'Etsy authentication required' });
-  }
-  next();
-};
-
 module.exports = {
   requireAuth,
-  requireGoogleAuth,
-  requireEtsyAuth
+  requireGoogleAuth
 };

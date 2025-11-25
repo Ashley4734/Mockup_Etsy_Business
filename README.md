@@ -1,16 +1,24 @@
 # Etsy Mockup Listing Generator
 
-An automated web application that generates and publishes Etsy listings for your mockup images stored in Google Drive, powered by AI.
+A web application that generates AI-powered Etsy listing content for your mockup images stored in Google Drive. The app analyzes your mockups, creates optimized listing content, and generates a PDF with Google Drive download links - all ready to copy and paste into Etsy.
 
 ## Features
 
 - 🖼️ **Google Drive Integration** - Browse and select mockup images directly from your Google Drive
-- 🤖 **AI-Powered Content Generation** - Automatically generate listing titles, descriptions, and tags using OpenAI
-- 🏪 **Etsy API Integration** - Create listings directly on Etsy with one click
+- 🤖 **AI-Powered Content Generation** - Automatically generate listing titles, descriptions, and tags using OpenAI GPT-4 Vision
 - 📄 **PDF Download Links** - Automatically generates PDFs with Google Drive share links for digital downloads
+- 📋 **Copy-to-Clipboard** - Easy one-click copying of all listing content
 - 📝 **Custom Templates** - Create reusable content sections to include in all your listings
 - 🎨 **Multi-Select Gallery** - Select single or multiple mockups to create listings
 - 🚀 **One-Click Deploy** - Ready for deployment on Coolify with Docker
+
+## How It Works
+
+1. **Connect Google Drive** - Sign in and grant read access to your mockup images
+2. **Select Mockups** - Choose one or more mockups from your gallery
+3. **Generate Content** - AI analyzes your mockup and creates optimized listing content
+4. **Review & Edit** - Customize the title, description, price, and tags
+5. **Download & Copy** - Get your PDF and copy each section to paste into Etsy
 
 ## Tech Stack
 
@@ -26,7 +34,6 @@ An automated web application that generates and publishes Etsy listings for your
 - Node.js / Express
 - PostgreSQL
 - Google Drive API
-- Etsy API v3
 - OpenAI API (GPT-4 Vision)
 - PDFKit
 
@@ -36,11 +43,10 @@ An automated web application that generates and publishes Etsy listings for your
 
 ## Prerequisites
 
-Before you begin, you need to set up API credentials for:
+You need API credentials for:
 
 1. **Google Cloud Console** (for Google Drive API)
-2. **Etsy Developer Portal** (for Etsy API)
-3. **OpenAI** (for AI content generation)
+2. **OpenAI** (for AI content generation)
 
 ### 1. Google Drive API Setup
 
@@ -54,15 +60,7 @@ Before you begin, you need to set up API credentials for:
    - Authorized redirect URIs: `http://your-domain.com/api/auth/google/callback`
 7. Save the Client ID and Client Secret
 
-### 2. Etsy API Setup
-
-1. Go to [Etsy Developers](https://www.etsy.com/developers/)
-2. Create a new app
-3. Get your API Key (Keystring)
-4. Set up OAuth redirect URI: `http://your-domain.com/api/auth/etsy/callback`
-5. Note: Etsy uses OAuth 2.0 with PKCE
-
-### 3. OpenAI API Setup
+### 2. OpenAI API Setup
 
 1. Go to [OpenAI Platform](https://platform.openai.com/)
 2. Create an API key
@@ -100,11 +98,6 @@ Before you begin, you need to set up API credentials for:
    GOOGLE_CLIENT_ID=your-google-client-id
    GOOGLE_CLIENT_SECRET=your-google-client-secret
    GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
-
-   # Etsy API
-   ETSY_API_KEY=your-etsy-api-key
-   ETSY_API_SECRET=your-etsy-api-secret
-   ETSY_REDIRECT_URI=http://localhost:3000/api/auth/etsy/callback
 
    # OpenAI API
    OPENAI_API_KEY=your-openai-api-key
@@ -180,11 +173,6 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=https://your-domain.com/api/auth/google/callback
 
-# Etsy API
-ETSY_API_KEY=your-etsy-api-key
-ETSY_API_SECRET=your-etsy-api-secret
-ETSY_REDIRECT_URI=https://your-domain.com/api/auth/etsy/callback
-
 # OpenAI API
 OPENAI_API_KEY=your-openai-api-key
 
@@ -215,12 +203,11 @@ After the first deployment, run the migration:
 npm run migrate
 ```
 
-### Step 4: Update OAuth Redirect URIs
+### Step 4: Update OAuth Redirect URI
 
-Make sure to update your redirect URIs in Google Cloud Console and Etsy Developer Portal to use your production domain:
+Make sure to update your redirect URI in Google Cloud Console to use your production domain:
 
 - Google: `https://your-domain.com/api/auth/google/callback`
-- Etsy: `https://your-domain.com/api/auth/etsy/callback`
 
 ## Usage
 
@@ -228,7 +215,6 @@ Make sure to update your redirect URIs in Google Cloud Console and Etsy Develope
 
 1. Click "Sign in with Google Drive" on the login page
 2. Authorize the app to access your Google Drive (read-only)
-3. After successful Google authentication, connect your Etsy shop
 
 ### 2. Browse Mockups
 
@@ -246,23 +232,29 @@ Make sure to update your redirect URIs in Google Cloud Console and Etsy Develope
 1. Select one or more mockups from the gallery
 2. Click "Create Listing"
 3. Click "Generate Content" - AI will analyze your mockup and create:
-   - Optimized title
+   - Optimized title (max 140 characters)
    - Detailed description
-   - Relevant tags
+   - Relevant tags (13 tags)
    - Category suggestions
 4. Review and edit the generated content
 5. Set your price
-6. Click "Create Listing"
+6. Click "Finalize Listing"
 
-### 5. What Happens Next
+### 5. Copy & Paste to Etsy
 
-The app will:
-1. Create shareable links for your mockup files in Google Drive
-2. Generate a PDF with download instructions and links
-3. Upload the PDF to Etsy as a digital download file
-4. Upload the mockup image as the listing photo
-5. Create a draft listing on Etsy
-6. Return the Etsy listing URL for you to review and activate
+Once finalized, you'll see:
+- **Title** - Click "Copy" to copy to clipboard
+- **Description** - Click "Copy" to copy to clipboard
+- **Price** - Click "Copy" to copy to clipboard
+- **Tags** - Click "Copy" to copy comma-separated tags
+- **PDF Download** - Download the PDF with Google Drive links
+
+Then:
+1. Go to Etsy and create a new digital listing
+2. Paste the title, description, price, and tags
+3. Upload your mockup image(s) from Google Drive as listing photos
+4. Upload the downloaded PDF as the digital download file
+5. Publish your listing!
 
 ## Project Structure
 
@@ -275,7 +267,7 @@ The app will:
 │   │   ├── middleware/      # Auth middleware
 │   │   ├── models/          # Database schema
 │   │   ├── routes/          # API routes
-│   │   ├── services/        # Business logic (Google, Etsy, OpenAI, PDF)
+│   │   ├── services/        # Business logic (Google, OpenAI, PDF)
 │   │   ├── utils/           # Utilities (migration script)
 │   │   └── server.js        # Express app entry point
 │   └── package.json
@@ -298,8 +290,6 @@ The app will:
 ### Authentication
 - `GET /api/auth/google` - Initiate Google OAuth
 - `GET /api/auth/google/callback` - Google OAuth callback
-- `GET /api/auth/etsy` - Initiate Etsy OAuth
-- `GET /api/auth/etsy/callback` - Etsy OAuth callback
 - `GET /api/auth/status` - Get authentication status
 - `POST /api/auth/logout` - Logout
 
@@ -309,9 +299,10 @@ The app will:
 
 ### Listings
 - `POST /api/listings/generate` - Generate listing content with AI
-- `POST /api/listings/create` - Create Etsy listing
+- `POST /api/listings/create` - Create listing and generate PDF
 - `GET /api/listings` - Get user's created listings
 - `GET /api/listings/:id` - Get specific listing
+- `GET /api/listings/:id/download-pdf` - Download PDF for listing
 
 ### Templates
 - `GET /api/templates` - Get all templates
@@ -327,7 +318,7 @@ The app will:
 - Run migrations: `npm run migrate`
 
 ### OAuth Errors
-- Verify redirect URIs match exactly in Google/Etsy dashboards
+- Verify redirect URIs match exactly in Google Dashboard
 - Check that OAuth credentials are correct
 - Ensure cookies are enabled in your browser
 
@@ -336,10 +327,10 @@ The app will:
 - Check that you have access to GPT-4 Vision (gpt-4o)
 - Ensure sufficient API credits
 
-### Etsy Listing Creation Fails
-- Make sure you have connected your Etsy shop
-- Verify your shop has shipping and return policies set up
-- Check Etsy API rate limits
+### PDF Download Not Working
+- Check that the uploads directory exists and is writable
+- Verify the listing was created successfully
+- Check server logs for errors
 
 ## Security Notes
 
@@ -348,6 +339,7 @@ The app will:
 - Keep all API keys secure
 - The app only requests read access to Google Drive
 - OAuth tokens are stored encrypted in the database
+- PDFs are stored temporarily on the server
 
 ## Contributing
 

@@ -88,15 +88,15 @@ export default function LoginPage() {
               </li>
               <li className="flex items-start">
                 <span className="font-semibold mr-2">2.</span>
-                <span>Connect your Etsy shop</span>
-              </li>
-              <li className="flex items-start">
-                <span className="font-semibold mr-2">3.</span>
                 <span>Select mockups and let AI generate listing content</span>
               </li>
               <li className="flex items-start">
+                <span className="font-semibold mr-2">3.</span>
+                <span>Review, edit, and download your PDF with download links</span>
+              </li>
+              <li className="flex items-start">
                 <span className="font-semibold mr-2">4.</span>
-                <span>Review and publish to Etsy automatically</span>
+                <span>Copy and paste the content into your Etsy listing</span>
               </li>
             </ol>
           </div>

@@ -4,8 +4,6 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE,
   google_id VARCHAR(255),
   google_tokens JSONB,
-  etsy_tokens JSONB,
-  etsy_shop_id VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -22,18 +20,17 @@ CREATE TABLE IF NOT EXISTS templates (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Listings table to store created Etsy listings
+-- Listings table to store generated listings
 CREATE TABLE IF NOT EXISTS listings (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  etsy_listing_id VARCHAR(255) UNIQUE,
   title VARCHAR(500),
   description TEXT,
   price DECIMAL(10, 2),
   tags TEXT[], -- Array of tags
   mockup_files JSONB, -- Store Google Drive file info
   pdf_url TEXT,
-  status VARCHAR(50) DEFAULT 'draft', -- 'draft', 'active', 'inactive'
+  status VARCHAR(50) DEFAULT 'ready', -- 'ready', 'posted'
   ai_generated_content JSONB, -- Store the AI generated content for reference
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -44,7 +41,6 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 CREATE INDEX IF NOT EXISTS idx_templates_user_id ON templates(user_id);
 CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id);
-CREATE INDEX IF NOT EXISTS idx_listings_etsy_id ON listings(etsy_listing_id);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()

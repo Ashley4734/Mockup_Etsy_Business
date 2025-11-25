@@ -1,8 +1,9 @@
 const pool = require('../config/database');
 const GoogleDriveService = require('../services/googleDrive');
-const EtsyService = require('../services/etsy');
 const OpenAIService = require('../services/openai');
 const PDFGeneratorService = require('../services/pdfGenerator');
+const fs = require('fs').promises;
+const path = require('path');
 
 /**
  * Generate listing content using AI
@@ -64,18 +65,16 @@ exports.generateListingContent = async (req, res) => {
 };
 
 /**
- * Create Etsy listing with digital download
+ * Create listing with PDF download link
  */
-exports.createEtsyListing = async (req, res) => {
+exports.createListing = async (req, res) => {
   try {
     const {
       fileIds,
       title,
       description,
       price,
-      tags,
-      taxonomyId,
-      customSections
+      tags
     } = req.body;
 
     if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
@@ -86,31 +85,7 @@ exports.createEtsyListing = async (req, res) => {
       return res.status(400).json({ error: 'Title, description, and price are required' });
     }
 
-    if (!req.session.etsyShopId) {
-      return res.status(400).json({ error: 'Etsy shop not found' });
-    }
-
     const driveService = new GoogleDriveService(req.session.googleTokens);
-    const etsyService = new EtsyService(req.session.etsyTokens);
-    const shopId = req.session.etsyShopId;
-
-    // Get shipping and return policies
-    const shippingProfiles = await etsyService.getShippingProfiles(shopId);
-    const returnPolicies = await etsyService.getReturnPolicies(shopId);
-
-    // Create draft listing on Etsy
-    const listingData = {
-      title: title.substring(0, 140), // Etsy max title length
-      description,
-      price: parseFloat(price),
-      tags: tags.slice(0, 13), // Etsy allows max 13 tags
-      taxonomy_id: taxonomyId || 2322,
-      shipping_profile_id: shippingProfiles[0]?.shipping_profile_id || null,
-      return_policy_id: returnPolicies[0]?.return_policy_id || null
-    };
-
-    const listing = await etsyService.createDraftListing(shopId, listingData);
-    const listingId = listing.listing_id;
 
     // Prepare mockup files array with shareable links
     const mockupFiles = [];
@@ -123,15 +98,6 @@ exports.createEtsyListing = async (req, res) => {
         name: fileMetadata.name,
         shareLink: shareLink
       });
-
-      // Upload the mockup image to the Etsy listing
-      try {
-        const imageBuffer = await driveService.downloadFileAsBuffer(fileId);
-        await etsyService.uploadListingImage(shopId, listingId, imageBuffer, mockupFiles.length);
-      } catch (error) {
-        console.error(`Error uploading image ${fileId}:`, error);
-        // Continue even if image upload fails
-      }
     }
 
     // Generate PDF with download links
@@ -139,29 +105,29 @@ exports.createEtsyListing = async (req, res) => {
       title: title
     });
 
-    // Upload PDF as digital file to Etsy listing
-    await etsyService.uploadDigitalFile(
-      shopId,
-      listingId,
-      pdfBuffer,
-      'mockup-download-links.pdf'
-    );
+    // Save PDF to uploads directory
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    const pdfFileName = `listing-${Date.now()}.pdf`;
+    const pdfPath = path.join(uploadsDir, pdfFileName);
+    await fs.writeFile(pdfPath, pdfBuffer);
 
     // Save listing to database
     const insertResult = await pool.query(
       `INSERT INTO listings
-        (user_id, etsy_listing_id, title, description, price, tags, mockup_files, status)
+        (user_id, title, description, price, tags, mockup_files, pdf_url, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         req.session.userId,
-        listingId,
         title,
         description,
         price,
         tags,
         JSON.stringify(mockupFiles),
-        'draft'
+        pdfFileName,
+        'ready'
       ]
     );
 
@@ -171,17 +137,20 @@ exports.createEtsyListing = async (req, res) => {
       success: true,
       listing: {
         id: savedListing.id,
-        etsyListingId: listingId,
         title: savedListing.title,
-        status: 'draft',
-        url: `https://www.etsy.com/listing/${listingId}`
+        description: savedListing.description,
+        price: savedListing.price,
+        tags: savedListing.tags,
+        mockupFiles: mockupFiles,
+        pdfDownloadUrl: `/api/listings/${savedListing.id}/download-pdf`,
+        status: 'ready'
       },
-      message: 'Listing created successfully as draft. You can now review and activate it on Etsy.'
+      message: 'Listing content generated! Copy and paste into Etsy.'
     });
   } catch (error) {
-    console.error('Error creating Etsy listing:', error);
+    console.error('Error creating listing:', error);
     res.status(500).json({
-      error: 'Failed to create Etsy listing',
+      error: 'Failed to create listing',
       message: error.message
     });
   }
@@ -242,6 +211,52 @@ exports.getListingById = async (req, res) => {
     console.error('Error getting listing:', error);
     res.status(500).json({
       error: 'Failed to get listing',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Download PDF for a listing
+ */
+exports.downloadPDF = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.session.userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM listings WHERE id = $1 AND user_id = $2',
+      [id, req.session.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    const listing = result.rows[0];
+
+    if (!listing.pdf_url) {
+      return res.status(404).json({ error: 'PDF not found for this listing' });
+    }
+
+    const pdfPath = path.join(__dirname, '../../uploads', listing.pdf_url);
+
+    // Check if file exists
+    try {
+      await fs.access(pdfPath);
+    } catch (error) {
+      return res.status(404).json({ error: 'PDF file not found on server' });
+    }
+
+    // Send the file
+    res.download(pdfPath, 'mockup-download-links.pdf');
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    res.status(500).json({
+      error: 'Failed to download PDF',
       message: error.message
     });
   }

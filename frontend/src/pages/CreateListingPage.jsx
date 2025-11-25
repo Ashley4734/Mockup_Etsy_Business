@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Sparkles, DollarSign, Tag, Save } from 'lucide-react';
+import { ArrowLeft, Sparkles, DollarSign, Tag, Save, Copy, Download, Check } from 'lucide-react';
 import useMockupStore from '../stores/useMockupStore';
 import { listings, templates as templatesApi } from '../services/api';
 
@@ -15,6 +15,8 @@ export default function CreateListingPage() {
   const [price, setPrice] = useState('');
   const [tags, setTags] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [createdListing, setCreatedListing] = useState(null);
+  const [copiedField, setCopiedField] = useState(null);
 
   // Fetch user templates
   const { data: templatesData } = useQuery({
@@ -63,9 +65,7 @@ export default function CreateListingPage() {
       return response.data;
     },
     onSuccess: (data) => {
-      alert(`Listing created successfully! View it on Etsy: ${data.listing.url}`);
-      clearSelection();
-      navigate('/dashboard');
+      setCreatedListing(data.listing);
     },
     onError: (error) => {
       alert('Failed to create listing: ' + error.message);
@@ -92,6 +92,220 @@ export default function CreateListingPage() {
     });
   };
 
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    });
+  };
+
+  const handleStartNew = () => {
+    setCreatedListing(null);
+    setGeneratedContent(null);
+    setTitle('');
+    setDescription('');
+    setPrice('');
+    setTags([]);
+    clearSelection();
+    navigate('/dashboard');
+  };
+
+  // If listing is created, show the copyable format
+  if (createdListing) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900">Listing Created!</h1>
+          <button
+            onClick={handleStartNew}
+            className="btn btn-secondary"
+          >
+            Create Another
+          </button>
+        </div>
+
+        <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
+          <div className="flex items-start space-x-3">
+            <Check className="text-green-600 flex-shrink-0 mt-1" size={24} />
+            <div>
+              <h3 className="text-lg font-semibold text-green-900">Ready to Post!</h3>
+              <p className="text-green-800 mt-1">
+                Your listing content is ready. Copy each section below and paste into your Etsy listing.
+                Download the PDF to upload as your digital download file.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className="card">
+          <div className="flex justify-between items-start mb-3">
+            <label className="block text-sm font-semibold text-gray-700">
+              Title ({createdListing.title.length}/140 characters)
+            </label>
+            <button
+              onClick={() => copyToClipboard(createdListing.title, 'title')}
+              className="btn btn-secondary btn-sm flex items-center space-x-2"
+            >
+              {copiedField === 'title' ? (
+                <>
+                  <Check size={16} />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded p-4">
+            <p className="text-gray-900">{createdListing.title}</p>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="card">
+          <div className="flex justify-between items-start mb-3">
+            <label className="block text-sm font-semibold text-gray-700">Description</label>
+            <button
+              onClick={() => copyToClipboard(createdListing.description, 'description')}
+              className="btn btn-secondary btn-sm flex items-center space-x-2"
+            >
+              {copiedField === 'description' ? (
+                <>
+                  <Check size={16} />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded p-4">
+            <p className="text-gray-900 whitespace-pre-wrap">{createdListing.description}</p>
+          </div>
+        </div>
+
+        {/* Price */}
+        <div className="card">
+          <div className="flex justify-between items-start mb-3">
+            <label className="block text-sm font-semibold text-gray-700">Price</label>
+            <button
+              onClick={() => copyToClipboard(createdListing.price.toString(), 'price')}
+              className="btn btn-secondary btn-sm flex items-center space-x-2"
+            >
+              {copiedField === 'price' ? (
+                <>
+                  <Check size={16} />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded p-4">
+            <p className="text-gray-900 text-xl font-semibold">${createdListing.price}</p>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="card">
+          <div className="flex justify-between items-start mb-3">
+            <label className="block text-sm font-semibold text-gray-700">
+              Tags ({createdListing.tags.length}/13)
+            </label>
+            <button
+              onClick={() => copyToClipboard(createdListing.tags.join(', '), 'tags')}
+              className="btn btn-secondary btn-sm flex items-center space-x-2"
+            >
+              {copiedField === 'tags' ? (
+                <>
+                  <Check size={16} />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded p-4">
+            <div className="flex flex-wrap gap-2">
+              {createdListing.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-sm"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* PDF Download */}
+        <div className="card bg-primary-50 border-2 border-primary-200">
+          <div className="flex items-start space-x-4">
+            <Download className="text-primary-600 flex-shrink-0" size={32} />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900">Digital Download File</h3>
+              <p className="text-gray-700 mt-1 mb-4">
+                Download this PDF and upload it to your Etsy listing as the digital download file.
+                It contains instructions and Google Drive download links for your customers.
+              </p>
+              <a
+                href={createdListing.pdfDownloadUrl}
+                download
+                className="btn btn-primary inline-flex items-center space-x-2"
+              >
+                <Download size={18} />
+                <span>Download PDF</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="card bg-blue-50 border border-blue-200">
+          <h3 className="font-semibold text-blue-900 mb-3">Next Steps:</h3>
+          <ol className="space-y-2 text-blue-800">
+            <li className="flex items-start">
+              <span className="font-semibold mr-2">1.</span>
+              <span>Go to Etsy and start creating a new digital listing</span>
+            </li>
+            <li className="flex items-start">
+              <span className="font-semibold mr-2">2.</span>
+              <span>Copy and paste the Title, Description, Price, and Tags from above</span>
+            </li>
+            <li className="flex items-start">
+              <span className="font-semibold mr-2">3.</span>
+              <span>Upload your mockup image(s) from Google Drive as listing photos</span>
+            </li>
+            <li className="flex items-start">
+              <span className="font-semibold mr-2">4.</span>
+              <span>Download and upload the PDF as the digital download file</span>
+            </li>
+            <li className="flex items-start">
+              <span className="font-semibold mr-2">5.</span>
+              <span>Set your listing type to "Digital" and publish!</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -104,7 +318,7 @@ export default function CreateListingPage() {
           <span>Back</span>
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create Etsy Listing</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Generate Listing Content</h1>
           <p className="text-gray-600 mt-1">
             {selectedMockups.length} mockup{selectedMockups.length !== 1 ? 's' : ''} selected
           </p>
@@ -156,7 +370,7 @@ export default function CreateListingPage() {
       )}
 
       {/* Listing Form */}
-      {generatedContent && (
+      {generatedContent && !createdListing && (
         <div className="space-y-6">
           {/* Title */}
           <div className="card">
@@ -252,9 +466,9 @@ export default function CreateListingPage() {
           <div className="card bg-gray-50">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-semibold text-gray-900">Ready to create listing?</h3>
+                <h3 className="font-semibold text-gray-900">Ready to finalize?</h3>
                 <p className="text-sm text-gray-600">
-                  This will create a draft listing on Etsy with your mockup download link
+                  This will generate your PDF download link and prepare the listing for copy/paste
                 </p>
               </div>
               <button
@@ -270,7 +484,7 @@ export default function CreateListingPage() {
                 ) : (
                   <>
                     <Save size={18} />
-                    <span>Create Listing</span>
+                    <span>Finalize Listing</span>
                   </>
                 )}
               </button>

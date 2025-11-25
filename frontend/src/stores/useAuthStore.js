@@ -5,7 +5,6 @@ const useAuthStore = create((set) => ({
   user: null,
   isAuthenticated: false,
   googleConnected: false,
-  etsyConnected: false,
   loading: true,
 
   checkAuth: async () => {
@@ -15,7 +14,6 @@ const useAuthStore = create((set) => ({
         isAuthenticated: response.data.authenticated,
         user: response.data.email ? { email: response.data.email } : null,
         googleConnected: response.data.googleConnected,
-        etsyConnected: response.data.etsyConnected,
         loading: false
       });
     } catch (error) {
@@ -24,7 +22,6 @@ const useAuthStore = create((set) => ({
         isAuthenticated: false,
         user: null,
         googleConnected: false,
-        etsyConnected: false,
         loading: false
       });
     }
@@ -36,8 +33,7 @@ const useAuthStore = create((set) => ({
       set({
         isAuthenticated: false,
         user: null,
-        googleConnected: false,
-        etsyConnected: false
+        googleConnected: false
       });
     } catch (error) {
       console.error('Error logging out:', error);
